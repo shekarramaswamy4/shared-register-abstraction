@@ -11,11 +11,6 @@ type ClientResolver struct {
 	C *Client
 }
 
-type writeReq struct {
-	Addr  string
-	Value string
-}
-
 func (nr *ClientResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/write":
@@ -43,11 +38,11 @@ func (cr *ClientResolver) Read(w http.ResponseWriter, r *http.Request) (shared.V
 }
 
 func (nr *ClientResolver) Write(w http.ResponseWriter, r *http.Request) error {
-	var req writeReq
+	var req shared.WriteReq
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		return err
 	}
 
-	return nr.C.Write(req.Addr, req.Value)
+	return nr.C.Write(req.Address, req.Value)
 }

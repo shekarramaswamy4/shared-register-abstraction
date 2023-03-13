@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -99,6 +100,73 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 }
 
 func (c *Client) Write(addr string, val string) error {
+	if err := c.write(addr, val); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) write(addr string, val string) error {
+	// First write, then confirm
+	writeCh := make(chan error)
+
+	// Write to the nodes in parallel
+	for _, port := range c.NodePorts {
+		port := port
+		go func(port string) {
+			err := c.writeToNode(addr, val, port)
+			writeCh <- err
+		}(port)
+	}
+
+	// Collect the results
+	numSuccessWrites := 0
+	for i := 0; i < len(c.NodePorts); i++ {
+		// TODO: don't wait for all writes to complete
+		res := <-writeCh
+		if res != nil {
+			fmt.Printf("Error writing to node: %s", res)
+		} else {
+			numSuccessWrites++
+		}
+	}
+
+	if numSuccessWrites < c.QuorumThreshold {
+		return fmt.Errorf("Writing to quorum not reached, try again later")
+	}
+
+	return nil
+}
+
+func (c *Client) confirm(addr string) error {
+	confirmCh := make(chan error)
+
+	// Write to the nodes in parallel
+	for _, port := range c.NodePorts {
+		port := port
+		go func(port string) {
+			err := c.confirmWithNode(addr, port)
+			confirmCh <- err
+		}(port)
+	}
+
+	// Collect the results
+	numSuccessConfirms := 0
+	for i := 0; i < len(c.NodePorts); i++ {
+		// TODO: don't wait for all confirms to complete
+		res := <-confirmCh
+		if res != nil {
+			fmt.Printf("Error writing to node: %s", res)
+		} else {
+			numSuccessConfirms++
+		}
+	}
+
+	if numSuccessConfirms < c.QuorumThreshold {
+		return fmt.Errorf("Writing to quorum not reached, try again later")
+	}
+
 	return nil
 }
 
@@ -114,4 +182,37 @@ func (c *Client) readFromNode(addr string, port string) (shared.ValueVersion, er
 	}
 
 	return vv, nil
+}
+
+func (c *Client) writeToNode(addr string, val string, port string) error {
+	body, _ := json.Marshal(shared.WriteReq{
+		Address: addr,
+		Value:   val,
+	})
+	resp, err := c.httpClient.Post(shared.CreateURL(port, "/write"), "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Write failed: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *Client) confirmWithNode(addr string, port string) error {
+	body, _ := json.Marshal(shared.ConfirmReq{
+		Address: addr,
+	})
+	resp, err := c.httpClient.Post(shared.CreateURL(port, "/confirm"), "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Confirm failed: %d", resp.StatusCode)
+	}
+
+	return nil
 }

@@ -11,15 +11,6 @@ type NodeResolver struct {
 	N *Node
 }
 
-type writeReq struct {
-	Addr  string
-	Value string
-}
-
-type confirmReq struct {
-	Addr string
-}
-
 func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/read":
@@ -71,21 +62,21 @@ func (nr *NodeResolver) Read(w http.ResponseWriter, r *http.Request) (shared.Val
 }
 
 func (nr *NodeResolver) Write(w http.ResponseWriter, r *http.Request) error {
-	var req writeReq
+	var req shared.WriteReq
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		return err
 	}
 
-	return nr.N.Write(req.Addr, req.Value)
+	return nr.N.Write(req.Address, req.Value)
 }
 
 func (nr *NodeResolver) Confirm(w http.ResponseWriter, r *http.Request) error {
-	var req confirmReq
+	var req shared.ConfirmReq
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		return err
 	}
 
-	return nr.N.Confirm(req.Addr)
+	return nr.N.Confirm(req.Address)
 }

@@ -10,3 +10,12 @@ func WriteError(w http.ResponseWriter, err error) {
 func CreateURL(port, path string) string {
 	return "http://localhost:" + port + path
 }
+
+type WriteReq struct {
+	Address string
+	Value   string
+}
+
+type ConfirmReq struct {
+	Address string
+}
