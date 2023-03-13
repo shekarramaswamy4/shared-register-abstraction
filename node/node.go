@@ -9,12 +9,13 @@ import (
 	"github.com/shekarramaswamy4/shared-register-abstraction/shared"
 )
 
-const pendingTimeout = 5 * time.Second
+const pendingTimeout = 2 * time.Second
 
 type Node struct {
 	ID     string
 	Memory map[string]AddressData
 	// TODO: map[string]Mutex
+	// TODO: manipulate time fn for testing?
 }
 
 // AddressData is what's stored at each address
@@ -34,7 +35,7 @@ func New() *Node {
 
 func (n *Node) Read(addr string) (shared.ValueVersion, error) {
 	ad, ok := n.Memory[addr]
-	if !ok {
+	if !ok || ad.ValueVersion.Version == 0 {
 		// TODO: fractions - read from other nodes
 		return shared.ValueVersion{}, errors.New(fmt.Sprintf("Address %s not found", addr))
 	}
