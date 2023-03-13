@@ -2,16 +2,18 @@ package node
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/shekarramaswamy4/shared-register-abstraction/shared"
 )
 
-type NodeResolver struct {
-	N *Node
+func (n *Node) StartHTTP(port string) {
+	fmt.Printf("Running node %s on port %s\n", n.ID, port)
+	http.ListenAndServe(fmt.Sprintf(":%s", port), n)
 }
 
-func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/read":
 		if r.Method != http.MethodGet {
@@ -19,7 +21,7 @@ func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		vv, err := nr.Read(w, r)
+		vv, err := n.ReadResolver(w, r)
 		if err != nil {
 			shared.WriteError(w, err)
 		}
@@ -35,7 +37,7 @@ func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := nr.Write(w, r); err != nil {
+		if err := n.WriteResolver(w, r); err != nil {
 			shared.WriteError(w, err)
 		}
 
@@ -46,7 +48,7 @@ func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := nr.Confirm(w, r); err != nil {
+		if err := n.ConfirmResolver(w, r); err != nil {
 			shared.WriteError(w, err)
 		}
 
@@ -56,27 +58,27 @@ func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (nr *NodeResolver) Read(w http.ResponseWriter, r *http.Request) (shared.ValueVersion, error) {
+func (n *Node) ReadResolver(w http.ResponseWriter, r *http.Request) (shared.ValueVersion, error) {
 	addr := r.URL.Query().Get("address")
-	return nr.N.Read(addr)
+	return n.Read(addr)
 }
 
-func (nr *NodeResolver) Write(w http.ResponseWriter, r *http.Request) error {
+func (n *Node) WriteResolver(w http.ResponseWriter, r *http.Request) error {
 	var req shared.WriteReq
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		return err
 	}
 
-	return nr.N.Write(req.Address, req.Value)
+	return n.Write(req.Address, req.Value)
 }
 
-func (nr *NodeResolver) Confirm(w http.ResponseWriter, r *http.Request) error {
+func (n *Node) ConfirmResolver(w http.ResponseWriter, r *http.Request) error {
 	var req shared.ConfirmReq
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		return err
 	}
 
-	return nr.N.Confirm(req.Address)
+	return n.Confirm(req.Address)
 }

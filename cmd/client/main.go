@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 
@@ -36,9 +34,6 @@ func main() {
 	}
 
 	c := client.New(numNodes, firstNodePort)
-	id := c.ID
-	cr := &client.ClientResolver{C: c}
 
-	fmt.Printf("Running client %s on port %s\n", id, port)
-	http.ListenAndServe(fmt.Sprintf(":%s", port), cr)
+	c.StartHTTP(port)
 }
