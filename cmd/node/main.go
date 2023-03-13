@@ -17,6 +17,8 @@ func main() {
 	id := n.ID
 	nr := &node.NodeResolver{N: n}
 
+	// TODO: gossip with other nodes to get up to date
+
 	fmt.Printf("Running node %s on port %s\n", id, port)
 	http.ListenAndServe(fmt.Sprintf(":%s", port), nr)
 }

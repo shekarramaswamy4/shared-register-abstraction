@@ -3,6 +3,8 @@ package node
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/shekarramaswamy4/shared-register-abstraction/shared"
 )
 
 type NodeResolver struct {
@@ -21,25 +23,40 @@ type confirmReq struct {
 func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/read":
-		res, err := nr.Read(w, r)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
 		}
-		w.Write([]byte(res))
+
+		vv, err := nr.Read(w, r)
+		if err != nil {
+			shared.WriteError(w, err)
+		}
+
+		if err := json.NewEncoder(w).Encode(vv); err != nil {
+			shared.WriteError(w, err)
+		}
 
 		return
 	case "/write":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		if err := nr.Write(w, r); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			shared.WriteError(w, err)
 		}
 
 		return
 	case "/confirm":
+		if r.Method != http.MethodPut {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		if err := nr.Confirm(w, r); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			shared.WriteError(w, err)
 		}
 
 		return
@@ -48,7 +65,7 @@ func (nr *NodeResolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (nr *NodeResolver) Read(w http.ResponseWriter, r *http.Request) (string, error) {
+func (nr *NodeResolver) Read(w http.ResponseWriter, r *http.Request) (shared.ValueVersion, error) {
 	addr := r.URL.Query().Get("address")
 	return nr.N.Read(addr)
 }
