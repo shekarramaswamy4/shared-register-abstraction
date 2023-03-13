@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	// port,
+	// port
 	args := os.Args[1:]
 	port := args[1]
 
@@ -17,7 +17,7 @@ func main() {
 	id := n.ID
 	nr := &node.NodeResolver{N: n}
 
-	// TODO: gossip with other nodes to get up to date
+	// TODO: gossip with other nodes to get up to date when boostrapping
 
 	fmt.Printf("Running node %s on port %s\n", id, port)
 	http.ListenAndServe(fmt.Sprintf(":%s", port), nr)
