@@ -96,6 +96,8 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 		return shared.ValueVersion{}, fmt.Errorf("Not enough valid responses to make quorum")
 	}
 
+	log.Printf("Client %s read address %s with value %s and version %d", c.ID, addr, *currentValue, *latestVersion)
+
 	// Update nodes that were behind
 	// Now that we know the latest version and value, we simply iterate through the read responses
 	// again and update the nodes that either errored or had an out of date version
@@ -127,6 +129,7 @@ func (c *Client) Write(addr string, val string) error {
 		return err
 	}
 
+	// OPTIMIZATION: Only send confirmations to nodes that acked the write
 	return c.confirm(addr)
 }
 
@@ -150,7 +153,7 @@ func (c *Client) write(addr string, val string) error {
 		// TODO: don't wait for all writes to complete
 		res := <-writeCh
 		if res != nil {
-			log.Printf("Error writing to node: %s", res)
+			log.Printf("Error writing to node on port %s: %s", c.NodePorts[i], res)
 		} else {
 			numSuccessWrites++
 		}
@@ -160,7 +163,7 @@ func (c *Client) write(addr string, val string) error {
 		return fmt.Errorf("Writing to quorum not reached, try again later")
 	}
 
-	log.Printf("Reached quorum writing %s to address %s\n", val, addr)
+	log.Printf("Client %s reached quorum writing %s to address %s\n", c.ID, val, addr)
 
 	return nil
 }
@@ -195,7 +198,7 @@ func (c *Client) confirm(addr string) error {
 		return fmt.Errorf("Confirming to quorum not reached, try again later")
 	}
 
-	log.Printf("Reached quorum confirming to address %s\n", addr)
+	log.Printf("Client %s reached quorum confirming to address %s\n", c.ID, addr)
 
 	return nil
 }

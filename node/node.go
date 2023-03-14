@@ -20,6 +20,14 @@ type Node struct {
 	Port    int
 	Memory  map[string]AddressData
 	mutexes sync.Map
+
+	Flags TestingFlags
+}
+
+type TestingFlags struct {
+	RefuseRead    bool
+	RefuseWrite   bool
+	RefuseConfirm bool
 }
 
 // AddressData is what's stored at each address
@@ -35,6 +43,8 @@ func New(port int) *Node {
 		ID:     uuid.NewString(),
 		Port:   port,
 		Memory: make(map[string]AddressData),
+
+		Flags: TestingFlags{},
 	}
 }
 
@@ -42,17 +52,27 @@ func New(port int) *Node {
 func (n *Node) Read(addr string) (shared.ValueVersion, error) {
 	log.Printf("Node %s reading address %s", n.ID, addr)
 
+	if n.Flags.RefuseRead {
+		return shared.ValueVersion{}, errors.New("Refusing to read because of testing flag")
+	}
+
 	ad, ok := n.Memory[addr]
 	if !ok || ad.ValueVersion.Version == 0 {
 		// TODO: fractions - read from other nodes. Start typing the error
 		return shared.ValueVersion{}, errors.New(fmt.Sprintf("Address %s not found", addr))
 	}
+
+	log.Printf("Node %s returned address %s with value %s and version %d", n.ID, addr, ad.ValueVersion.Value, ad.ValueVersion.Version)
 	return ad.ValueVersion, nil
 }
 
 // Write "pre-commits" the specified value at the given address
 func (n *Node) Write(addr string, val string) error {
 	log.Printf("Node %s writing to address %s with value %s", n.ID, addr, val)
+
+	if n.Flags.RefuseWrite {
+		return errors.New("Refusing to write because of testing flag")
+	}
 
 	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
 	mtx := loadMtx.(*sync.Mutex)
@@ -112,6 +132,10 @@ func (n *Node) Write(addr string, val string) error {
 func (n *Node) Confirm(addr string) error {
 	log.Printf("Node %s confirming address %s", n.ID, addr)
 
+	if n.Flags.RefuseConfirm {
+		return errors.New("Refusing to confirm because of testing flag")
+	}
+
 	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
 	mtx := loadMtx.(*sync.Mutex)
 	mtx.Lock()
@@ -152,16 +176,21 @@ func (n *Node) Update(addr, val string, version int) error {
 
 	defer mtx.Unlock()
 
+	updatedVV := shared.ValueVersion{
+		Value:   val,
+		Version: version,
+	}
+
 	ad, ok := n.Memory[addr]
 	if !ok {
-		return errors.New(fmt.Sprintf("Address %s not found", addr))
+		n.Memory[addr] = AddressData{
+			ValueVersion: updatedVV,
+		}
+		return nil
 	}
 
 	n.Memory[addr] = AddressData{
-		ValueVersion: shared.ValueVersion{
-			Value:   val,
-			Version: version,
-		},
+		ValueVersion:     updatedVV,
 		PendingValue:     ad.PendingValue,
 		PendingTimestamp: ad.PendingTimestamp,
 	}
