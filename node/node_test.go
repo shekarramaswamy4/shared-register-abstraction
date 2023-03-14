@@ -8,7 +8,7 @@ import (
 )
 
 func TestInitialization(t *testing.T) {
-	n := New()
+	n := New(8080)
 
 	_, err := n.Read("addr1")
 	assert.NotNil(t, err)
@@ -20,7 +20,7 @@ func TestInitialization(t *testing.T) {
 }
 
 func TestWriteAndConfirm(t *testing.T) {
-	n := New()
+	n := New(8080)
 
 	err := n.Write("addr1", "val1")
 	assert.Nil(t, err)
@@ -35,7 +35,7 @@ func TestWriteAndConfirm(t *testing.T) {
 }
 
 func TestWriteNoTimeout(t *testing.T) {
-	n := New()
+	n := New(8080)
 
 	err := n.Write("addr1", "val1")
 	assert.Nil(t, err)
@@ -53,7 +53,7 @@ func TestWriteNoTimeout(t *testing.T) {
 }
 
 func TestWriteWithTimeout(t *testing.T) {
-	n := New()
+	n := New(8080)
 
 	err := n.Write("addr1", "val1")
 	assert.Nil(t, err)
