@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 const pendingTimeout = 2 * time.Second
 
 type Node struct {
+	Server  *http.Server
 	ID      string
 	Port    int
 	Memory  map[string]AddressData

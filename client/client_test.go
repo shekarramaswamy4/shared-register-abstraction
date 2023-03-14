@@ -2,6 +2,7 @@ package client
 
 import (
 	"testing"
+	"time"
 
 	"github.com/shekarramaswamy4/shared-register-abstraction/node"
 	"github.com/stretchr/testify/assert"
@@ -9,17 +10,19 @@ import (
 
 func TestInitialization(t *testing.T) {
 	n1 := node.New(8080)
-	n1.StartHTTP()
 	c := New(8070, 1, 8080)
-	c.StartHTTP()
 
-	_, err := c.Read("addr1")
-	assert.Nil(t, err)
+	go n1.StartHTTP()
+	go c.StartHTTP()
+	time.Sleep(1)
 
-	err = c.Write("addr1", "val1")
+	err := c.Write("addr1", "val1")
 	assert.Nil(t, err)
 	v, err := c.Read("addr1")
 	assert.Nil(t, err)
-	assert.Equal(t, v.Value, "val1")
-	assert.Equal(t, v.Version, 1)
+	assert.Equal(t, "val1", v.Value)
+	assert.Equal(t, 1, v.Version)
+
+	n1.Server.Close()
+	c.Server.Close()
 }

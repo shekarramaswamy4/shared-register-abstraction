@@ -14,6 +14,7 @@ import (
 )
 
 type Client struct {
+	Server          *http.Server
 	ID              string
 	Port            int
 	NumNodes        int
@@ -194,7 +195,7 @@ func (c *Client) confirm(addr string) error {
 		return fmt.Errorf("Confirming to quorum not reached, try again later")
 	}
 
-	log.Printf("Reached quorum writing to address %s\n", addr)
+	log.Printf("Reached quorum confirming to address %s\n", addr)
 
 	return nil
 }

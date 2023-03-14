@@ -11,7 +11,17 @@ import (
 
 func (n *Node) StartHTTP() {
 	log.Printf("Running node %s on port %d\n", n.ID, n.Port)
-	http.ListenAndServe(fmt.Sprintf(":%d", n.Port), n)
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", n.Port),
+		Handler: n,
+	}
+	n.Server = server
+
+	if err := server.ListenAndServe(); err != nil {
+		if err != http.ErrServerClosed {
+			log.Printf("Server shut down: %s\n", err.Error())
+		}
+	}
 }
 
 func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
