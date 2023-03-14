@@ -90,6 +90,8 @@ func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err := n.UpdateResolver(w, r); err != nil {
 			shared.WriteError(w, err)
 		}
+
+		return
 	}
 
 	w.WriteHeader(http.StatusNotFound)

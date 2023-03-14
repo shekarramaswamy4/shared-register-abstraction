@@ -31,6 +31,8 @@ func includeInShard(hash uint32, shard, numShards, numReplicas int) bool {
 	primaryShard := int(hash) % numShards
 	if shard == primaryShard {
 		return true
+	} else if numReplicas == 1 {
+		return false
 	}
 
 	shardStart := primaryShard
@@ -46,6 +48,6 @@ func includeInShard(hash uint32, shard, numShards, numReplicas int) bool {
 func HashAndCheckShardInclusion(addr string, shard, numShards, numReplicas int) bool {
 	h := hash(addr)
 	res := includeInShard(h, shard, numShards, numReplicas)
-	log.Printf("Hashing address %s, result is %v, primary shard %d, current shard %d, should include %v", addr, h, int(h)%numShards, shard, res)
+	log.Printf("Hashing address %s, result is %v, primary shard %d, current shard %d, numReplicas %d, should include %v", addr, h, int(h)%numShards, shard, numReplicas, res)
 	return res
 }

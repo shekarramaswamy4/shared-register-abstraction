@@ -109,7 +109,6 @@ func (n *Node) Write(addr string, val string) (bool, error) {
 	now := n.GetNow()
 	// Current address has never been seen before
 	if !ok {
-		// TODO: fractions - determine if this node should have the address at all
 		n.Memory[addr] = AddressData{
 			ValueVersion:     shared.ValueVersion{},
 			PendingValue:     &val,

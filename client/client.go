@@ -83,15 +83,15 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 			continue
 		} else if !res.NodeShouldInclude {
 			log.Printf("Node on port %s doesn't accept read to address %s", res.Port, addr)
+			continue
 		}
 
 		validResponses++
-		if currentValue == nil {
-			currentValue = &res.ValueVersion.Value
-			latestVersion = &res.ValueVersion.Version
-		} else if res.ValueVersion.Version > *latestVersion {
-			currentValue = &res.ValueVersion.Value
-			latestVersion = &res.ValueVersion.Version
+		value := res.ValueVersion.Value
+		version := res.ValueVersion.Version
+		if currentValue == nil || res.ValueVersion.Version > *latestVersion {
+			currentValue = &value
+			latestVersion = &version
 		}
 	}
 
