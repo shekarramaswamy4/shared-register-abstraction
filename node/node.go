@@ -28,6 +28,7 @@ type TestingFlags struct {
 	RefuseRead    bool
 	RefuseWrite   bool
 	RefuseConfirm bool
+	Time          *time.Time
 }
 
 // AddressData is what's stored at each address
@@ -46,6 +47,13 @@ func New(port int) *Node {
 
 		Flags: TestingFlags{},
 	}
+}
+
+func (n *Node) GetNow() time.Time {
+	if n.Flags.Time != nil {
+		return *n.Flags.Time
+	}
+	return time.Now().UTC()
 }
 
 // Read returns the value at the given address
@@ -82,7 +90,7 @@ func (n *Node) Write(addr string, val string) error {
 
 	ad, ok := n.Memory[addr]
 
-	now := time.Now().UTC()
+	now := n.GetNow()
 	// Current address has never been seen before
 	if !ok {
 		// TODO: fractions - determine if this node should have the address at all
@@ -118,7 +126,7 @@ func (n *Node) Write(addr string, val string) error {
 
 			log.Printf("Node %s precommited to address %s with value %s. Invalidated prev value %v", n.ID, addr, val, pv)
 		} else {
-			log.Printf("Node %s rejected precommitment to address %s with value %s. Pending value %v", n.ID, addr, val, pv)
+			log.Printf("Node %s rejected precommitment to address %s with value %s at time %v. Pending value %v at time %v", n.ID, addr, val, now, pv, pt)
 
 			// timeout didn't expire, reject
 			return errors.New(fmt.Sprintf("Address %s has a pending value %s", addr, *ad.PendingValue))
