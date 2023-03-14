@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,7 +92,25 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 		return shared.ValueVersion{}, fmt.Errorf("Not enough valid responses to make quorum")
 	}
 
-	// OPTIMIZATION: update stale nodes?
+	// Update nodes that were behind
+	// Now that we know the latest version and value, we simply iterate through the read responses
+	// again and update the nodes that either errored or had an out of date version
+	wg := sync.WaitGroup{}
+	for _, res := range readRes {
+		res := res
+
+		if res.Err != nil || res.ValueVersion.Version != *latestVersion {
+			wg.Add(1)
+			go func(port string) {
+				defer wg.Done()
+				if err := c.updateNode(addr, *currentValue, *latestVersion, port); err != nil {
+					fmt.Printf("Error updating node %s: %s", port, err)
+				}
+			}(res.Port)
+		}
+	}
+
+	wg.Wait()
 
 	return shared.ValueVersion{
 		Value:   *currentValue,
@@ -224,6 +243,25 @@ func (c *Client) confirmWithNode(addr string, port string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Confirm failed: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *Client) updateNode(addr string, val string, version int, port string) error {
+	body, _ := json.Marshal(shared.UpdateReq{
+		Address: addr,
+		Value:   val,
+		Version: version,
+	})
+	req, _ := http.NewRequest(http.MethodPut, shared.CreateURL(port, "/update"), bytes.NewBuffer(body))
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Update node failed: %d", resp.StatusCode)
 	}
 
 	return nil

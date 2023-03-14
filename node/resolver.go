@@ -56,6 +56,15 @@ func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return
+	case "/update":
+		if r.Method != http.MethodPut {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		if err := n.UpdateResolver(w, r); err != nil {
+			shared.WriteError(w, err)
+		}
 	}
 
 	w.WriteHeader(http.StatusNotFound)
@@ -84,4 +93,14 @@ func (n *Node) ConfirmResolver(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return n.Confirm(req.Address)
+}
+
+func (n *Node) UpdateResolver(w http.ResponseWriter, r *http.Request) error {
+	var req shared.UpdateReq
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		return err
+	}
+
+	return n.Update(req.Address, req.Value, req.Version)
 }

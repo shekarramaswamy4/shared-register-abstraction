@@ -33,6 +33,7 @@ func New() *Node {
 	}
 }
 
+// Read returns the value at the given address
 func (n *Node) Read(addr string) (shared.ValueVersion, error) {
 	ad, ok := n.Memory[addr]
 	if !ok || ad.ValueVersion.Version == 0 {
@@ -42,9 +43,10 @@ func (n *Node) Read(addr string) (shared.ValueVersion, error) {
 	return ad.ValueVersion, nil
 }
 
+// Write "pre-commits" the specified value at the given address
 func (n *Node) Write(addr string, val string) error {
-	value, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
-	mtx := value.(*sync.Mutex)
+	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
+	mtx := loadMtx.(*sync.Mutex)
 	mtx.Lock()
 
 	defer mtx.Unlock()
@@ -90,9 +92,10 @@ func (n *Node) Write(addr string, val string) error {
 	return nil
 }
 
+// Confirm confirms the pending value at the given address
 func (n *Node) Confirm(addr string) error {
-	value, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
-	mtx := value.(*sync.Mutex)
+	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
+	mtx := loadMtx.(*sync.Mutex)
 	mtx.Lock()
 
 	defer mtx.Unlock()
@@ -113,6 +116,31 @@ func (n *Node) Confirm(addr string) error {
 		},
 		PendingValue:     nil,
 		PendingTimestamp: nil,
+	}
+
+	return nil
+}
+
+// Update forcibly updates the current value and version at an address.
+func (n *Node) Update(addr, val string, version int) error {
+	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
+	mtx := loadMtx.(*sync.Mutex)
+	mtx.Lock()
+
+	defer mtx.Unlock()
+
+	ad, ok := n.Memory[addr]
+	if !ok {
+		return errors.New(fmt.Sprintf("Address %s not found", addr))
+	}
+
+	n.Memory[addr] = AddressData{
+		ValueVersion: shared.ValueVersion{
+			Value:   val,
+			Version: version,
+		},
+		PendingValue:     ad.PendingValue,
+		PendingTimestamp: ad.PendingTimestamp,
 	}
 
 	return nil

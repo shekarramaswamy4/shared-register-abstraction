@@ -19,3 +19,9 @@ type WriteReq struct {
 type ConfirmReq struct {
 	Address string
 }
+
+type UpdateReq struct {
+	Address string
+	Version int
+	Value   string
+}
