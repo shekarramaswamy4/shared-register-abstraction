@@ -2,14 +2,21 @@
 
 Something like https://en.wikipedia.org/wiki/Shared_register
 
-Created a distributed shared register among a configurable amount of nodes. The implementation for the nodes and the client that talks to these nodes are both in this repo.
+Created a distributed shared register among a configurable amount of nodes. The implementation for the nodes and the client that talks to these nodes are both in this repo. Both nodes and clients are written as web servers.
 
-This uses (leaderless election)[https://arpit.substack.com/p/leaderless-replication] to write data. 
+Nodes and clients are assumed to be non-malicious.
+
+This uses [leaderless election](https://arpit.substack.com/p/leaderless-replication) to write data. 
 
 ## Node
 A node has *memory*, which is a mapping from an address to string data.
 
 This implementation assumes a static set of nodes. It is tolerant to network partitions (as long as a quorum is still reachable), but is not designed to handle arbitrary nodes entering and exiting the system.
+
+A node has 4 endpoints: read, write, confirm, and update.
+
+## Client
+A client has 2 endpoints: read and write.
 
 ## Reads and Writes
 Reading data is done by reading from a quorum. Clients fetch data from nodes for a given address and choose the data with the latest confirmed timestamp. Clients then update the out of date nodes.
