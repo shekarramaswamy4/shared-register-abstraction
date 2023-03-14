@@ -126,5 +126,7 @@ func TestQuorumWithOneFaultyReplica(t *testing.T) {
 	n1.Server.Close()
 	n2.Server.Close()
 	n3.Server.Close()
+	n4.Server.Close()
+	n5.Server.Close()
 	c.Server.Close()
 }
