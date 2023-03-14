@@ -3,18 +3,19 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/shekarramaswamy4/shared-register-abstraction/shared"
 )
 
-func (c *Client) StartHTTP(port string) {
-	fmt.Printf("Running client %s on port %s\n", c.ID, port)
-	http.ListenAndServe(fmt.Sprintf(":%s", port), c)
+func (c *Client) StartHTTP() {
+	log.Printf("Running client %s on port %d\n", c.ID, c.Port)
+	http.ListenAndServe(fmt.Sprintf(":%d", c.Port), c)
 }
 
 func (c *Client) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Client %s received request: %s\n", c.ID, r.URL.Path)
+	log.Printf("Client %s received request: %s\n", c.ID, r.URL.Path)
 
 	switch r.URL.Path {
 	case "/write":

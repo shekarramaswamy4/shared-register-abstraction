@@ -11,7 +11,10 @@ import (
 func main() {
 	// port, numNodes, firstNodePort
 	args := os.Args[1:]
-	port := args[1]
+	port, err := strconv.Atoi(args[1])
+	if err != nil {
+		log.Fatalf("Invalid port number: %s", args[1])
+	}
 
 	numNodes, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -33,7 +36,7 @@ func main() {
 		log.Fatalf("Invalid first node port: %s", args[3])
 	}
 
-	c := client.New(numNodes, firstNodePort)
+	c := client.New(port, numNodes, firstNodePort)
 
-	c.StartHTTP(port)
+	c.StartHTTP()
 }

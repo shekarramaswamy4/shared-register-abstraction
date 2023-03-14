@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -14,15 +15,17 @@ import (
 
 type Client struct {
 	ID              string
+	Port            int
 	NumNodes        int
 	QuorumThreshold int
 	NodePorts       []string
 	httpClient      http.Client
 }
 
-func New(numNodes int, firstNodePort int) *Client {
+func New(port int, numNodes int, firstNodePort int) *Client {
 	c := &Client{
 		ID:              uuid.NewString(),
+		Port:            port,
 		NumNodes:        numNodes,
 		QuorumThreshold: numNodes/2 + 1,
 		httpClient: http.Client{
@@ -63,7 +66,7 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 	for i := 0; i < len(c.NodePorts); i++ {
 		res := <-ch
 		if res.Err != nil {
-			fmt.Printf("Error reading from node %s: %s", res.Port, res.Err)
+			log.Printf("Error reading from node %s: %s", res.Port, res.Err)
 		}
 		// TODO: don't wait for all reads to complete
 		readRes = append(readRes, res)
@@ -104,7 +107,7 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 			go func(port string) {
 				defer wg.Done()
 				if err := c.updateNode(addr, *currentValue, *latestVersion, port); err != nil {
-					fmt.Printf("Error updating node %s: %s", port, err)
+					log.Printf("Error updating node %s: %s", port, err)
 				}
 			}(res.Port)
 		}
@@ -127,7 +130,7 @@ func (c *Client) Write(addr string, val string) error {
 }
 
 func (c *Client) write(addr string, val string) error {
-	fmt.Printf("Attempting to write value %s to address %s\n", val, addr)
+	log.Printf("Attempting to write value %s to address %s\n", val, addr)
 	// First write, then confirm
 	writeCh := make(chan error)
 
@@ -146,7 +149,7 @@ func (c *Client) write(addr string, val string) error {
 		// TODO: don't wait for all writes to complete
 		res := <-writeCh
 		if res != nil {
-			fmt.Printf("Error writing to node: %s", res)
+			log.Printf("Error writing to node: %s", res)
 		} else {
 			numSuccessWrites++
 		}
@@ -156,13 +159,13 @@ func (c *Client) write(addr string, val string) error {
 		return fmt.Errorf("Writing to quorum not reached, try again later")
 	}
 
-	fmt.Printf("Reached quorum writing %s to address %s\n", val, addr)
+	log.Printf("Reached quorum writing %s to address %s\n", val, addr)
 
 	return nil
 }
 
 func (c *Client) confirm(addr string) error {
-	fmt.Printf("Attempting to confirm address %s\n", addr)
+	log.Printf("Attempting to confirm address %s\n", addr)
 
 	confirmCh := make(chan error)
 
@@ -181,7 +184,7 @@ func (c *Client) confirm(addr string) error {
 		// TODO: don't wait for all confirms to complete
 		res := <-confirmCh
 		if res != nil {
-			fmt.Printf("Error writing to node: %s", res)
+			log.Printf("Error writing to node: %s", res)
 		} else {
 			numSuccessConfirms++
 		}
@@ -191,7 +194,7 @@ func (c *Client) confirm(addr string) error {
 		return fmt.Errorf("Confirming to quorum not reached, try again later")
 	}
 
-	fmt.Printf("Reached quorum writing to address %s\n", addr)
+	log.Printf("Reached quorum writing to address %s\n", addr)
 
 	return nil
 }

@@ -14,6 +14,7 @@ const pendingTimeout = 2 * time.Second
 
 type Node struct {
 	ID      string
+	Port    int
 	Memory  map[string]AddressData
 	mutexes sync.Map
 }
@@ -26,9 +27,10 @@ type AddressData struct {
 	PendingTimestamp *time.Time
 }
 
-func New() *Node {
+func New(port int) *Node {
 	return &Node{
 		ID:     uuid.NewString(),
+		Port:   port,
 		Memory: make(map[string]AddressData),
 	}
 }

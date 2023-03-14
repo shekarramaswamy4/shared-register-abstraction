@@ -3,18 +3,19 @@ package node
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/shekarramaswamy4/shared-register-abstraction/shared"
 )
 
-func (n *Node) StartHTTP(port string) {
-	fmt.Printf("Running node %s on port %s\n", n.ID, port)
-	http.ListenAndServe(fmt.Sprintf(":%s", port), n)
+func (n *Node) StartHTTP() {
+	log.Printf("Running node %s on port %d\n", n.ID, n.Port)
+	http.ListenAndServe(fmt.Sprintf(":%d", n.Port), n)
 }
 
 func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Node %s received request: %s\n", n.ID, r.URL.Path)
+	log.Printf("Node %s received request: %s\n", n.ID, r.URL.Path)
 
 	switch r.URL.Path {
 	case "/read":
