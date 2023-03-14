@@ -3,6 +3,7 @@ package node
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,9 +13,9 @@ import (
 const pendingTimeout = 2 * time.Second
 
 type Node struct {
-	ID     string
-	Memory map[string]AddressData
-	// TODO: map[string]Mutex
+	ID      string
+	Memory  map[string]AddressData
+	mutexes sync.Map
 }
 
 // AddressData is what's stored at each address
@@ -35,13 +36,19 @@ func New() *Node {
 func (n *Node) Read(addr string) (shared.ValueVersion, error) {
 	ad, ok := n.Memory[addr]
 	if !ok || ad.ValueVersion.Version == 0 {
-		// TODO: fractions - read from other nodes
+		// TODO: fractions - read from other nodes. Start typing the error
 		return shared.ValueVersion{}, errors.New(fmt.Sprintf("Address %s not found", addr))
 	}
 	return ad.ValueVersion, nil
 }
 
 func (n *Node) Write(addr string, val string) error {
+	value, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
+	mtx := value.(*sync.Mutex)
+	mtx.Lock()
+
+	defer mtx.Unlock()
+
 	ad, ok := n.Memory[addr]
 
 	now := time.Now().UTC()
@@ -84,6 +91,12 @@ func (n *Node) Write(addr string, val string) error {
 }
 
 func (n *Node) Confirm(addr string) error {
+	value, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
+	mtx := value.(*sync.Mutex)
+	mtx.Lock()
+
+	defer mtx.Unlock()
+
 	ad, ok := n.Memory[addr]
 	if !ok {
 		return errors.New(fmt.Sprintf("Address %s not found", addr))

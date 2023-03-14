@@ -91,7 +91,7 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 		return shared.ValueVersion{}, fmt.Errorf("Not enough valid responses to make quorum")
 	}
 
-	// TODO: update stale nodes?
+	// OPTIMIZATION: update stale nodes?
 
 	return shared.ValueVersion{
 		Value:   *currentValue,
