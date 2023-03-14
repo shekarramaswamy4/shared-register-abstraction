@@ -12,7 +12,7 @@ A node has *memory*, which is a mapping from an address to string data.
 ## Reads and Writes
 Reading data is done by reading from a quorum. Clients fetch data from nodes for a given address and choose the data with the latest confirmed timestamp. Clients then update the out of date nodes.
 
-Modifying data is done in two phases, "writing" and "confirming". Both writes and confirms must be acked by a quorum to declare a write successful.
+Modifying data is done in two phases, "writing" and "confirming". Both writes and confirms must be acked by a quorum of nodes to declare a write successful.
 
 ## Fractional Replication
 This implementation also supports fractional replication, where data can only live on a certain subset of the nodes. This parameter is passed into the node constructor.
