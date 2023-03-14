@@ -8,16 +8,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/shekarramaswamy4/shared-register-abstraction/shared"
 )
 
 const pendingTimeout = 2 * time.Second
 
 type Node struct {
-	Server  *http.Server
-	ID      string
-	Port    int
+	Server     *http.Server
+	ID         int
+	Port       int
+	TotalNodes int
+	// NumReplicas / TotalNodes defines the fraction of nodes values should be replicated to
+	// (TotalNodes/2+1) <= NumReplicas <= TotalNodes
+	NumReplicas int
+
 	Memory  map[string]AddressData
 	mutexes sync.Map
 
@@ -39,10 +43,13 @@ type AddressData struct {
 	PendingTimestamp *time.Time
 }
 
-func New(port int) *Node {
+func New(id, port, totalNodes, numReplicas int) *Node {
 	return &Node{
-		ID:     uuid.NewString(),
-		Port:   port,
+		ID:          id,
+		Port:        port,
+		TotalNodes:  totalNodes,
+		NumReplicas: numReplicas,
+
 		Memory: make(map[string]AddressData),
 
 		Flags: TestingFlags{},
@@ -58,7 +65,7 @@ func (n *Node) GetNow() time.Time {
 
 // Read returns the value at the given address
 func (n *Node) Read(addr string) (shared.ValueVersion, error) {
-	log.Printf("Node %s reading address %s", n.ID, addr)
+	log.Printf("Node %d reading address %s", n.ID, addr)
 
 	if n.Flags.RefuseRead {
 		return shared.ValueVersion{}, errors.New("Refusing to read because of testing flag")
@@ -70,13 +77,13 @@ func (n *Node) Read(addr string) (shared.ValueVersion, error) {
 		return shared.ValueVersion{}, errors.New(fmt.Sprintf("Address %s not found", addr))
 	}
 
-	log.Printf("Node %s returned address %s with value %s and version %d", n.ID, addr, ad.ValueVersion.Value, ad.ValueVersion.Version)
+	log.Printf("Node %d returned address %s with value %s and version %d", n.ID, addr, ad.ValueVersion.Value, ad.ValueVersion.Version)
 	return ad.ValueVersion, nil
 }
 
 // Write "pre-commits" the specified value at the given address
 func (n *Node) Write(addr string, val string) error {
-	log.Printf("Node %s writing to address %s with value %s", n.ID, addr, val)
+	log.Printf("Node %d writing to address %s with value %s", n.ID, addr, val)
 
 	if n.Flags.RefuseWrite {
 		return errors.New("Refusing to write because of testing flag")
@@ -99,7 +106,7 @@ func (n *Node) Write(addr string, val string) error {
 			PendingValue:     &val,
 			PendingTimestamp: &now,
 		}
-		log.Printf("Node %s precommited to address %s with value %s", n.ID, addr, val)
+		log.Printf("Node %d precommited to address %s with value %s", n.ID, addr, val)
 		return nil
 	}
 
@@ -111,7 +118,7 @@ func (n *Node) Write(addr string, val string) error {
 			PendingValue:     &val,
 			PendingTimestamp: &now,
 		}
-		log.Printf("Node %s precommited to address %s with value %s", n.ID, addr, val)
+		log.Printf("Node %d precommited to address %s with value %s", n.ID, addr, val)
 	} else {
 		// There is already a pending value for the current address
 		pt := *ad.PendingTimestamp
@@ -124,9 +131,9 @@ func (n *Node) Write(addr string, val string) error {
 				PendingTimestamp: &now,
 			}
 
-			log.Printf("Node %s precommited to address %s with value %s. Invalidated prev value %v", n.ID, addr, val, pv)
+			log.Printf("Node %d precommited to address %s with value %s. Invalidated prev value %v", n.ID, addr, val, pv)
 		} else {
-			log.Printf("Node %s rejected precommitment to address %s with value %s at time %v. Pending value %v at time %v", n.ID, addr, val, now, pv, pt)
+			log.Printf("Node %d rejected precommitment to address %s with value %s at time %v. Pending value %v at time %v", n.ID, addr, val, now, pv, pt)
 
 			// timeout didn't expire, reject
 			return errors.New(fmt.Sprintf("Address %s has a pending value %s", addr, *ad.PendingValue))
@@ -138,7 +145,7 @@ func (n *Node) Write(addr string, val string) error {
 
 // Confirm confirms the pending value at the given address
 func (n *Node) Confirm(addr string) error {
-	log.Printf("Node %s confirming address %s", n.ID, addr)
+	log.Printf("Node %d confirming address %s", n.ID, addr)
 
 	if n.Flags.RefuseConfirm {
 		return errors.New("Refusing to confirm because of testing flag")
@@ -169,14 +176,14 @@ func (n *Node) Confirm(addr string) error {
 		PendingTimestamp: nil,
 	}
 
-	log.Printf("Node %s confirmed address %s with value %s and version %d", n.ID, addr, *ad.PendingValue, version)
+	log.Printf("Node %d confirmed address %s with value %s and version %d", n.ID, addr, *ad.PendingValue, version)
 
 	return nil
 }
 
 // Update forcibly updates the current value and version at an address.
 func (n *Node) Update(addr, val string, version int) error {
-	log.Printf("Node %s updating address %s with val %s and version %d", n.ID, addr, val, version)
+	log.Printf("Node %d updating address %s with val %s and version %d", n.ID, addr, val, version)
 
 	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
 	mtx := loadMtx.(*sync.Mutex)
@@ -203,7 +210,7 @@ func (n *Node) Update(addr, val string, version int) error {
 		PendingTimestamp: ad.PendingTimestamp,
 	}
 
-	log.Printf("Node %s updated address %s with val %s and version %d", n.ID, addr, val, version)
+	log.Printf("Node %d updated address %s with val %s and version %d", n.ID, addr, val, version)
 
 	return nil
 }

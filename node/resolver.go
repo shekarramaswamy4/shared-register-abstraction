@@ -10,7 +10,7 @@ import (
 )
 
 func (n *Node) StartHTTP() {
-	log.Printf("Running node %s on port %d\n", n.ID, n.Port)
+	log.Printf("Running node %d on port %d\n", n.ID, n.Port)
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", n.Port),
 		Handler: n,
@@ -25,7 +25,7 @@ func (n *Node) StartHTTP() {
 }
 
 func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Node %s received request: %s\n", n.ID, r.URL.Path)
+	log.Printf("Node %d received request: %s\n", n.ID, r.URL.Path)
 
 	switch r.URL.Path {
 	case "/read":
