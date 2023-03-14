@@ -10,25 +10,26 @@ import (
 func TestInitialization(t *testing.T) {
 	n := New(0, 8080, 1, 1)
 
-	_, err := n.Read("addr1")
+	_, shouldInclude, err := n.Read("addr1")
 	assert.NotNil(t, err)
+	assert.True(t, shouldInclude)
 
-	err = n.Write("addr1", "val1")
+	_, err = n.Write("addr1", "val1")
 	assert.Nil(t, err)
-	_, err = n.Read("addr1")
+	_, _, err = n.Read("addr1")
 	assert.NotNil(t, err)
 }
 
 func TestWriteAndConfirm(t *testing.T) {
 	n := New(0, 8080, 1, 1)
 
-	err := n.Write("addr1", "val1")
+	_, err := n.Write("addr1", "val1")
 	assert.Nil(t, err)
 
 	err = n.Confirm("addr1")
 	assert.Nil(t, err)
 
-	vv, err := n.Read("addr1")
+	vv, _, err := n.Read("addr1")
 	assert.Nil(t, err)
 	assert.Equal(t, vv.Value, "val1")
 	assert.Equal(t, vv.Version, 1)
@@ -37,16 +38,17 @@ func TestWriteAndConfirm(t *testing.T) {
 func TestWriteNoTimeout(t *testing.T) {
 	n := New(0, 8080, 1, 1)
 
-	err := n.Write("addr1", "val1")
+	shouldInclude, err := n.Write("addr1", "val1")
 	assert.Nil(t, err)
+	assert.True(t, shouldInclude)
 
-	err = n.Write("addr1", "val2")
+	_, err = n.Write("addr1", "val2")
 	assert.NotNil(t, err)
 
 	err = n.Confirm("addr1")
 	assert.Nil(t, err)
 
-	vv, err := n.Read("addr1")
+	vv, _, err := n.Read("addr1")
 	assert.Nil(t, err)
 	assert.Equal(t, vv.Value, "val1")
 	assert.Equal(t, vv.Version, 1)
@@ -55,18 +57,18 @@ func TestWriteNoTimeout(t *testing.T) {
 func TestWriteWithTimeout(t *testing.T) {
 	n := New(0, 8080, 1, 1)
 
-	err := n.Write("addr1", "val1")
+	_, err := n.Write("addr1", "val1")
 	assert.Nil(t, err)
 
 	time.Sleep(pendingTimeout + 1*time.Second)
 
-	err = n.Write("addr1", "val2")
+	_, err = n.Write("addr1", "val2")
 	assert.Nil(t, err)
 
 	err = n.Confirm("addr1")
 	assert.Nil(t, err)
 
-	vv, err := n.Read("addr1")
+	vv, _, err := n.Read("addr1")
 	assert.Nil(t, err)
 	assert.Equal(t, vv.Value, "val2")
 	assert.Equal(t, vv.Version, 1)

@@ -70,14 +70,14 @@ func TestOneDownNodeAndForceUpdate(t *testing.T) {
 	err := c.Write("addr1", "val1")
 	assert.Nil(t, err)
 
-	v, err := n1.Read("addr1")
+	v, _, err := n1.Read("addr1")
 	// n1 doesn't have anything written to it yet
 	assert.NotNil(t, err)
-	v, err = n2.Read("addr1")
+	v, _, err = n2.Read("addr1")
 	assert.Nil(t, err)
 	assert.Equal(t, "val1", v.Value)
 	assert.Equal(t, 1, v.Version)
-	v, err = n3.Read("addr1")
+	v, _, err = n3.Read("addr1")
 	assert.Nil(t, err)
 	assert.Equal(t, "val1", v.Value)
 	assert.Equal(t, 1, v.Version)
@@ -89,7 +89,7 @@ func TestOneDownNodeAndForceUpdate(t *testing.T) {
 
 	// After reading, the client should update other members to get up to speed
 	// Therefore, n1 should be updated
-	v, err = n1.Read("addr1")
+	v, _, err = n1.Read("addr1")
 	assert.Nil(t, err)
 	assert.Equal(t, "val1", v.Value)
 	assert.Equal(t, 1, v.Version)

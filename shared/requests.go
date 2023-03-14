@@ -25,3 +25,12 @@ type UpdateReq struct {
 	Version int
 	Value   string
 }
+
+type NodeReadRes struct {
+	ValueVersion  ValueVersion
+	ShouldInclude bool
+}
+
+type NodeWriteRes struct {
+	ShouldInclude bool
+}

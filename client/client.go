@@ -57,7 +57,7 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 	for _, port := range c.NodePorts {
 		port := port
 		go func(port string) {
-			vv, err := c.readFromNode(addr, port)
+			vv, _, err := c.readFromNode(addr, port)
 			ch <- readResult{vv, port, err}
 		}(port)
 	}
@@ -142,7 +142,7 @@ func (c *Client) write(addr string, val string) error {
 	for _, port := range c.NodePorts {
 		port := port
 		go func(port string) {
-			err := c.writeToNode(addr, val, port)
+			_, err := c.writeToNode(addr, val, port)
 			writeCh <- err
 		}(port)
 	}
@@ -203,39 +203,44 @@ func (c *Client) confirm(addr string) error {
 	return nil
 }
 
-func (c *Client) readFromNode(addr string, port string) (shared.ValueVersion, error) {
+func (c *Client) readFromNode(addr string, port string) (shared.ValueVersion, bool, error) {
 	resp, err := c.httpClient.Get(shared.CreateURL(port, "/read?address="+addr))
 	if err != nil {
-		return shared.ValueVersion{}, err
+		return shared.ValueVersion{}, false, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return shared.ValueVersion{}, fmt.Errorf("Read failed: %d", resp.StatusCode)
+		return shared.ValueVersion{}, false, fmt.Errorf("Read failed: %d", resp.StatusCode)
 	}
 
-	var vv shared.ValueVersion
-	if err := json.NewDecoder(resp.Body).Decode(&vv); err != nil {
-		return shared.ValueVersion{}, err
+	var res shared.NodeReadRes
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return shared.ValueVersion{}, false, err
 	}
 
-	return vv, nil
+	return res.ValueVersion, res.ShouldInclude, nil
 }
 
-func (c *Client) writeToNode(addr string, val string, port string) error {
+func (c *Client) writeToNode(addr string, val string, port string) (bool, error) {
 	body, _ := json.Marshal(shared.WriteReq{
 		Address: addr,
 		Value:   val,
 	})
 	resp, err := c.httpClient.Post(shared.CreateURL(port, "/write"), "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Write failed: %d", resp.StatusCode)
+		return false, fmt.Errorf("Write failed: %d", resp.StatusCode)
 	}
 
-	return nil
+	var res shared.NodeWriteRes
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return false, err
+	}
+
+	return res.ShouldInclude, nil
 }
 
 func (c *Client) confirmWithNode(addr string, port string) error {

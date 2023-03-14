@@ -34,13 +34,18 @@ func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		vv, err := n.ReadResolver(w, r)
+		vv, shouldInclude, err := n.ReadResolver(w, r)
 		if err != nil {
 			shared.WriteError(w, err)
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(vv); err != nil {
+		res := shared.NodeReadRes{
+			ValueVersion:  vv,
+			ShouldInclude: shouldInclude,
+		}
+
+		if err := json.NewEncoder(w).Encode(res); err != nil {
 			shared.WriteError(w, err)
 		}
 
@@ -51,7 +56,16 @@ func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := n.WriteResolver(w, r); err != nil {
+		shouldInclude, err := n.WriteResolver(w, r)
+		if err != nil {
+			shared.WriteError(w, err)
+		}
+
+		res := shared.NodeWriteRes{
+			ShouldInclude: shouldInclude,
+		}
+
+		if err := json.NewEncoder(w).Encode(res); err != nil {
 			shared.WriteError(w, err)
 		}
 
@@ -81,16 +95,16 @@ func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (n *Node) ReadResolver(w http.ResponseWriter, r *http.Request) (shared.ValueVersion, error) {
+func (n *Node) ReadResolver(w http.ResponseWriter, r *http.Request) (shared.ValueVersion, bool, error) {
 	addr := r.URL.Query().Get("address")
 	return n.Read(addr)
 }
 
-func (n *Node) WriteResolver(w http.ResponseWriter, r *http.Request) error {
+func (n *Node) WriteResolver(w http.ResponseWriter, r *http.Request) (bool, error) {
 	var req shared.WriteReq
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	return n.Write(req.Address, req.Value)

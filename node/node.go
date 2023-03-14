@@ -64,29 +64,38 @@ func (n *Node) GetNow() time.Time {
 }
 
 // Read returns the value at the given address
-func (n *Node) Read(addr string) (shared.ValueVersion, error) {
+func (n *Node) Read(addr string) (shared.ValueVersion, bool, error) {
 	log.Printf("Node %d reading address %s", n.ID, addr)
 
 	if n.Flags.RefuseRead {
-		return shared.ValueVersion{}, errors.New("Refusing to read because of testing flag")
+		return shared.ValueVersion{}, false, errors.New("Refusing to read because of testing flag")
+	}
+
+	shouldInclude := shared.HashAndCheckShardInclusion(addr, n.ID, n.TotalNodes, n.NumReplicas)
+	if !shouldInclude {
+		return shared.ValueVersion{}, false, nil
 	}
 
 	ad, ok := n.Memory[addr]
 	if !ok || ad.ValueVersion.Version == 0 {
-		// TODO: fractions - read from other nodes. Start typing the error
-		return shared.ValueVersion{}, errors.New(fmt.Sprintf("Address %s not found", addr))
+		return shared.ValueVersion{}, true, errors.New(fmt.Sprintf("Address %s not found", addr))
 	}
 
 	log.Printf("Node %d returned address %s with value %s and version %d", n.ID, addr, ad.ValueVersion.Value, ad.ValueVersion.Version)
-	return ad.ValueVersion, nil
+	return ad.ValueVersion, true, nil
 }
 
 // Write "pre-commits" the specified value at the given address
-func (n *Node) Write(addr string, val string) error {
+func (n *Node) Write(addr string, val string) (bool, error) {
 	log.Printf("Node %d writing to address %s with value %s", n.ID, addr, val)
 
 	if n.Flags.RefuseWrite {
-		return errors.New("Refusing to write because of testing flag")
+		return false, errors.New("Refusing to write because of testing flag")
+	}
+
+	shouldInclude := shared.HashAndCheckShardInclusion(addr, n.ID, n.TotalNodes, n.NumReplicas)
+	if !shouldInclude {
+		return false, nil
 	}
 
 	loadMtx, _ := n.mutexes.LoadOrStore(addr, &sync.Mutex{})
@@ -107,7 +116,7 @@ func (n *Node) Write(addr string, val string) error {
 			PendingTimestamp: &now,
 		}
 		log.Printf("Node %d precommited to address %s with value %s", n.ID, addr, val)
-		return nil
+		return true, nil
 	}
 
 	// Current address has been seen before
@@ -136,11 +145,11 @@ func (n *Node) Write(addr string, val string) error {
 			log.Printf("Node %d rejected precommitment to address %s with value %s at time %v. Pending value %v at time %v", n.ID, addr, val, now, pv, pt)
 
 			// timeout didn't expire, reject
-			return errors.New(fmt.Sprintf("Address %s has a pending value %s", addr, *ad.PendingValue))
+			return true, errors.New(fmt.Sprintf("Address %s has a pending value %s", addr, *ad.PendingValue))
 		}
 	}
 
-	return nil
+	return true, nil
 }
 
 // Confirm confirms the pending value at the given address
