@@ -9,6 +9,8 @@ This uses (leaderless election)[https://arpit.substack.com/p/leaderless-replicat
 ## Node
 A node has *memory*, which is a mapping from an address to string data.
 
+This implementation assumes a static set of nodes. It is tolerant to network partitions (as long as a quorum is still reachable), but is not designed to handle arbitrary nodes entering and exiting the system.
+
 ## Reads and Writes
 Reading data is done by reading from a quorum. Clients fetch data from nodes for a given address and choose the data with the latest confirmed timestamp. Clients then update the out of date nodes.
 
