@@ -88,7 +88,7 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 	}
 
 	if validResponses < c.QuorumThreshold {
-		return shared.ValueVersion{}, fmt.Errorf("Fetching from quorum not reached")
+		return shared.ValueVersion{}, fmt.Errorf("Not enough valid responses to make quorum")
 	}
 
 	// TODO: update stale nodes?
@@ -104,10 +104,11 @@ func (c *Client) Write(addr string, val string) error {
 		return err
 	}
 
-	return nil
+	return c.confirm(addr)
 }
 
 func (c *Client) write(addr string, val string) error {
+	fmt.Printf("Attempting to write value %s to address %s\n", val, addr)
 	// First write, then confirm
 	writeCh := make(chan error)
 
@@ -136,10 +137,14 @@ func (c *Client) write(addr string, val string) error {
 		return fmt.Errorf("Writing to quorum not reached, try again later")
 	}
 
+	fmt.Printf("Reached quorum writing %s to address %s\n", val, addr)
+
 	return nil
 }
 
 func (c *Client) confirm(addr string) error {
+	fmt.Printf("Attempting to confirm address %s\n", addr)
+
 	confirmCh := make(chan error)
 
 	// Write to the nodes in parallel
@@ -164,8 +169,10 @@ func (c *Client) confirm(addr string) error {
 	}
 
 	if numSuccessConfirms < c.QuorumThreshold {
-		return fmt.Errorf("Writing to quorum not reached, try again later")
+		return fmt.Errorf("Confirming to quorum not reached, try again later")
 	}
+
+	fmt.Printf("Reached quorum writing to address %s\n", addr)
 
 	return nil
 }
@@ -174,6 +181,10 @@ func (c *Client) readFromNode(addr string, port string) (shared.ValueVersion, er
 	resp, err := c.httpClient.Get(shared.CreateURL(port, "/read?address="+addr))
 	if err != nil {
 		return shared.ValueVersion{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return shared.ValueVersion{}, fmt.Errorf("Read failed: %d", resp.StatusCode)
 	}
 
 	var vv shared.ValueVersion
@@ -205,7 +216,8 @@ func (c *Client) confirmWithNode(addr string, port string) error {
 	body, _ := json.Marshal(shared.ConfirmReq{
 		Address: addr,
 	})
-	resp, err := c.httpClient.Post(shared.CreateURL(port, "/confirm"), "application/json", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPut, shared.CreateURL(port, "/confirm"), bytes.NewBuffer(body))
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

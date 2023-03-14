@@ -14,6 +14,8 @@ func (n *Node) StartHTTP(port string) {
 }
 
 func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Node %s received request: %s\n", n.ID, r.URL.Path)
+
 	switch r.URL.Path {
 	case "/read":
 		if r.Method != http.MethodGet {
@@ -24,6 +26,7 @@ func (n *Node) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		vv, err := n.ReadResolver(w, r)
 		if err != nil {
 			shared.WriteError(w, err)
+			return
 		}
 
 		if err := json.NewEncoder(w).Encode(vv); err != nil {

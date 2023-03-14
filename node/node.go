@@ -15,7 +15,6 @@ type Node struct {
 	ID     string
 	Memory map[string]AddressData
 	// TODO: map[string]Mutex
-	// TODO: manipulate time fn for testing?
 }
 
 // AddressData is what's stored at each address

@@ -14,6 +14,7 @@ func main() {
 	n := node.New()
 
 	// TODO: gossip with other nodes to get up to date when boostrapping?
+	// should know the possible address space ahead of time
 
 	n.StartHTTP(port)
 }

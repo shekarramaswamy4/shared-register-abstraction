@@ -14,6 +14,8 @@ func (c *Client) StartHTTP(port string) {
 }
 
 func (c *Client) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Client %s received request: %s\n", c.ID, r.URL.Path)
+
 	switch r.URL.Path {
 	case "/write":
 		if r.Method != http.MethodPost {
@@ -21,11 +23,25 @@ func (c *Client) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err := c.WriteResolver(w, r); err != nil {
+			shared.WriteError(w, err)
+		}
+
 		return
 	case "/read":
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
+		}
+
+		vv, err := c.ReadResolver(w, r)
+		if err != nil {
+			shared.WriteError(w, err)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(vv); err != nil {
+			shared.WriteError(w, err)
 		}
 
 		return
