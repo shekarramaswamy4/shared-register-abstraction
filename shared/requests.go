@@ -27,10 +27,10 @@ type UpdateReq struct {
 }
 
 type NodeReadRes struct {
-	ValueVersion  ValueVersion
-	ShouldInclude bool
+	ValueVersion  ValueVersion `json:"valueVersion"`
+	ShouldInclude bool         `json:"shouldInclude"`
 }
 
 type NodeWriteRes struct {
-	ShouldInclude bool
+	ShouldInclude bool `json:"shouldInclude"`
 }

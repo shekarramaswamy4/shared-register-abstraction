@@ -45,9 +45,10 @@ func New(port int, numNodes int, firstNodePort int) *Client {
 }
 
 type readResult struct {
-	ValueVersion shared.ValueVersion
-	Port         string
-	Err          error
+	ValueVersion      shared.ValueVersion
+	NodeShouldInclude bool
+	Port              string
+	Err               error
 }
 
 func (c *Client) Read(addr string) (shared.ValueVersion, error) {
@@ -57,8 +58,8 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 	for _, port := range c.NodePorts {
 		port := port
 		go func(port string) {
-			vv, _, err := c.readFromNode(addr, port)
-			ch <- readResult{vv, port, err}
+			vv, shouldInclude, err := c.readFromNode(addr, port)
+			ch <- readResult{ValueVersion: vv, NodeShouldInclude: shouldInclude, Port: port, Err: err}
 		}(port)
 	}
 
@@ -80,6 +81,8 @@ func (c *Client) Read(addr string) (shared.ValueVersion, error) {
 	for _, res := range readRes {
 		if res.Err != nil {
 			continue
+		} else if !res.NodeShouldInclude {
+			log.Printf("Node on port %s doesn't accept read to address %s", res.Port, addr)
 		}
 
 		validResponses++
@@ -133,17 +136,22 @@ func (c *Client) Write(addr string, val string) error {
 	return c.confirm(addr)
 }
 
+type writeResult struct {
+	NodeShouldInclude bool
+	Err               error
+}
+
 func (c *Client) write(addr string, val string) error {
 	log.Printf("Attempting to write value %s to address %s\n", val, addr)
 	// First write, then confirm
-	writeCh := make(chan error)
+	writeCh := make(chan writeResult)
 
 	// Write to the nodes in parallel
 	for _, port := range c.NodePorts {
 		port := port
 		go func(port string) {
-			_, err := c.writeToNode(addr, val, port)
-			writeCh <- err
+			shouldInclude, err := c.writeToNode(addr, val, port)
+			writeCh <- writeResult{NodeShouldInclude: shouldInclude, Err: err}
 		}(port)
 	}
 
@@ -152,8 +160,10 @@ func (c *Client) write(addr string, val string) error {
 	for i := 0; i < len(c.NodePorts); i++ {
 		// TODO: don't wait for all writes to complete
 		res := <-writeCh
-		if res != nil {
-			log.Printf("Error writing to node on port %s: %s", c.NodePorts[i], res)
+		if res.Err != nil {
+			log.Printf("Error writing to node on port %s: %s", c.NodePorts[i], res.Err)
+		} else if !res.NodeShouldInclude {
+			log.Printf("Node on port %s doesn't accept write to address %s", c.NodePorts[i], addr)
 		} else {
 			numSuccessWrites++
 		}

@@ -27,9 +27,9 @@ func TestInitialization(t *testing.T) {
 }
 
 func Test3Nodes(t *testing.T) {
-	n1 := node.New(0, 8080, 1, 1)
-	n2 := node.New(1, 8081, 1, 1)
-	n3 := node.New(2, 8082, 1, 1)
+	n1 := node.New(0, 8080, 3, 3)
+	n2 := node.New(1, 8081, 3, 3)
+	n3 := node.New(2, 8082, 3, 3)
 
 	c := New(8070, 3, 8080)
 
@@ -54,9 +54,9 @@ func Test3Nodes(t *testing.T) {
 // TestOneDownNodeAndForceUpdate tests the case where one node out of three is down.
 // Writes should still confirm, and a read should update the node where the write failed.
 func TestOneDownNodeAndForceUpdate(t *testing.T) {
-	n1 := node.New(0, 8080, 1, 1)
-	n2 := node.New(1, 8081, 1, 1)
-	n3 := node.New(2, 8082, 1, 1)
+	n1 := node.New(0, 8080, 3, 3)
+	n2 := node.New(1, 8081, 3, 3)
+	n3 := node.New(2, 8082, 3, 3)
 
 	n1.Flags.RefuseWrite = true
 
@@ -101,9 +101,9 @@ func TestOneDownNodeAndForceUpdate(t *testing.T) {
 }
 
 func TestNoQuorumWrites(t *testing.T) {
-	n1 := node.New(0, 8080, 1, 1)
-	n2 := node.New(1, 8081, 1, 1)
-	n3 := node.New(2, 8082, 1, 1)
+	n1 := node.New(0, 8080, 3, 3)
+	n2 := node.New(1, 8081, 3, 3)
+	n3 := node.New(2, 8082, 3, 3)
 
 	n1.Flags.RefuseWrite = true
 	n2.Flags.RefuseWrite = true
@@ -127,9 +127,9 @@ func TestNoQuorumWrites(t *testing.T) {
 // Test that values aren't written if there's no confirmation.
 // Test a subsequent write to the same address before and after the threshold
 func TestNoQuorumConfirms(t *testing.T) {
-	n1 := node.New(0, 8080, 1, 1)
-	n2 := node.New(1, 8081, 1, 1)
-	n3 := node.New(2, 8082, 1, 1)
+	n1 := node.New(0, 8080, 3, 3)
+	n2 := node.New(1, 8081, 3, 3)
+	n3 := node.New(2, 8082, 3, 3)
 
 	n1.Flags.RefuseConfirm = true
 	n2.Flags.RefuseConfirm = true
@@ -174,9 +174,9 @@ func TestNoQuorumConfirms(t *testing.T) {
 // Test one client can read another's writes
 // Test the other client can update the version and the other client can read it
 func TestMultiClientBasic(t *testing.T) {
-	n1 := node.New(0, 8080, 1, 1)
-	n2 := node.New(1, 8081, 1, 1)
-	n3 := node.New(2, 8082, 1, 1)
+	n1 := node.New(0, 8080, 3, 3)
+	n2 := node.New(1, 8081, 3, 3)
+	n3 := node.New(2, 8082, 3, 3)
 
 	c1 := New(8070, 3, 8080)
 	c2 := New(8070, 3, 8080)

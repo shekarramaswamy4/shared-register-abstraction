@@ -2,6 +2,7 @@ package shared
 
 import (
 	"hash/fnv"
+	"log"
 )
 
 // Use the fnv hash function to hash a string to a uint32
@@ -43,5 +44,8 @@ func includeInShard(hash uint32, shard, numShards, numReplicas int) bool {
 }
 
 func HashAndCheckShardInclusion(addr string, shard, numShards, numReplicas int) bool {
-	return includeInShard(hash(addr), shard, numShards, numReplicas)
+	h := hash(addr)
+	res := includeInShard(h, shard, numShards, numReplicas)
+	log.Printf("Hashing address %s, result is %v, primary shard %d, current shard %d, should include %v", addr, h, int(h)%numShards, shard, res)
+	return res
 }
