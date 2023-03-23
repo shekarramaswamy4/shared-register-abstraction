@@ -6,7 +6,7 @@ Created a distributed shared register among a configurable amount of nodes. The 
 
 Nodes and clients are assumed to be non-malicious.
 
-This uses [leaderless election](https://arpit.substack.com/p/leaderless-replication) to write data. 
+This uses [leaderless replication](https://arpit.substack.com/p/leaderless-replication) to write data. I think it is sequentially consistent, but feel free to prove me wrong :)
 
 ## Node
 A node has *memory*, which is a mapping from an address to string data.
@@ -21,7 +21,7 @@ A client has 2 endpoints: read and write.
 ## Reads and Writes
 Reading data is done by reading from a quorum. Clients fetch data from nodes for a given address and choose the data with the latest confirmed timestamp. Clients then update the out of date nodes.
 
-Modifying data is done in two phases, "writing" and "confirming". Both writes and confirms must be acked by a quorum of nodes to declare a write successful.
+Writing data is done in two phases, "writing" and "confirming". Both writes and confirms must be acked by a quorum of nodes to declare a write successful.
 
 ## Fractional Replication
 This implementation also supports fractional replication, where data can only live on a certain subset of the nodes. This parameter is passed into the node constructor.
